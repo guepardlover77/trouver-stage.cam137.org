@@ -1,0 +1,46 @@
+# Configuration sensible
+config.json
+.env
+
+# Node.js
+node_modules/
+dist/
+backend/node_modules/
+backend/dist/
+
+# Fichiers temporaires Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+
+# Fichiers générés par le script
+nouveaux_stages_*.json
+nouveaux_stages_*.csv
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Archives
+*.zip
+
+# Fichiers temporaires Windows
+nul

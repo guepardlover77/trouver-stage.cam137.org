@@ -1,0 +1,5 @@
+{
+  "SIRENE_CONSUMER_KEY": "votre_consumer_key_ici",
+  "SIRENE_CONSUMER_SECRET": "votre_consumer_secret_ici",
+  "GOOGLE_PLACES_API_KEY": "optionnel_pour_enrichissement"
+}
