@@ -41,7 +41,7 @@ services:
     volumes:
       - ./data.json:/app/data.json:ro
     ports:
-      - "3001:3001"
+      - "${API_PORT:-3004}:3001"
     depends_on:
       postgres:
         condition: service_healthy
