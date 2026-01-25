@@ -4,7 +4,6 @@ config.json
 
 # Node.js
 node_modules/
-dist/
 backend/node_modules/
 backend/dist/
 
