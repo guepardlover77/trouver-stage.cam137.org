@@ -29,23 +29,27 @@ interface LegacyLocation {
 async function migrate(): Promise<void> {
   console.log('Starting migration from data.json to PostgreSQL...');
 
-  // Chemin vers data.json (à la racine du projet)
-  const dataPath = path.resolve(__dirname, '../../../../data.json');
+  // Liste des chemins possibles pour data.json
+  const possiblePaths = [
+    '/app/data.json',                                    // Docker container
+    path.resolve(__dirname, '../../../../data.json'),    // Dev relative
+    path.resolve(process.cwd(), '../data.json'),         // CWD relative
+    path.resolve(process.cwd(), 'data.json'),            // CWD direct
+  ];
 
-  if (!fs.existsSync(dataPath)) {
-    console.error(`File not found: ${dataPath}`);
-    console.log('Trying alternative path...');
-
-    const altPath = path.resolve(process.cwd(), '../data.json');
-    if (!fs.existsSync(altPath)) {
-      console.error(`File not found: ${altPath}`);
-      process.exit(1);
+  let dataFile: string | null = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      dataFile = p;
+      break;
     }
+    console.log(`File not found: ${p}`);
   }
 
-  const dataFile = fs.existsSync(dataPath)
-    ? dataPath
-    : path.resolve(process.cwd(), '../data.json');
+  if (!dataFile) {
+    console.error('Could not find data.json in any expected location');
+    process.exit(1);
+  }
 
   console.log(`Reading data from: ${dataFile}`);
 
