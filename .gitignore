@@ -19,7 +19,7 @@ venv/
 env/
 ENV/
 
-# Fichiers générés par le script
+# Fichiers générés
 nouveaux_stages_*.json
 nouveaux_stages_*.csv
 
@@ -35,11 +35,19 @@ desktop.ini
 *.swo
 *~
 
+# Claude Code
+.claude/
+
 # Logs
 *.log
 
 # Archives
 *.zip
+*.tar.gz
 
 # Fichiers temporaires Windows
 nul
+
+# Fichiers de données volumineux (à importer manuellement)
+*.xlsx
+*.pdf
