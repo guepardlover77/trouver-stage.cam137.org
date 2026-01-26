@@ -10,9 +10,10 @@ import { requireAuth, logout, createChangeCodeForm } from './AdminAuth';
 import { createLocationForm } from './LocationForm';
 import { createLocationList } from './LocationList';
 import { createImportPanel } from './ImportPanel';
+import { createInseeSearchPanel } from './InseeSearchPanel';
 import { refreshMarkers, focusOnMarker } from '../Map/Map';
 
-type Tab = 'add' | 'import' | 'manage' | 'settings';
+type Tab = 'add' | 'insee' | 'import' | 'manage' | 'settings';
 
 let currentTab: Tab = 'add';
 let editingIndex: number | undefined = undefined;
@@ -64,6 +65,10 @@ function createAdminModal(): void {
         <button type="button" class="admin-tab ${currentTab === 'add' ? 'active' : ''}" data-tab="add">
           <i class="fas fa-plus-circle"></i>
           <span>Ajouter</span>
+        </button>
+        <button type="button" class="admin-tab ${currentTab === 'insee' ? 'active' : ''}" data-tab="insee">
+          <i class="fas fa-building"></i>
+          <span>INSEE</span>
         </button>
         <button type="button" class="admin-tab ${currentTab === 'import' ? 'active' : ''}" data-tab="import">
           <i class="fas fa-file-import"></i>
@@ -145,6 +150,9 @@ function renderTab(tab: Tab): void {
     case 'add':
       renderAddTab(content);
       break;
+    case 'insee':
+      renderInseeTab(content);
+      break;
     case 'import':
       renderImportTab(content);
       break;
@@ -186,6 +194,18 @@ function renderAddTab(content: HTMLElement): void {
       if (editingIndex !== undefined) {
         switchTab('manage');
       }
+    }
+  });
+}
+
+/**
+ * Onglet Recherche INSEE
+ */
+function renderInseeTab(content: HTMLElement): void {
+  createInseeSearchPanel(content, {
+    onAdd: (location) => {
+      addLocation(location);
+      syncStore();
     }
   });
 }

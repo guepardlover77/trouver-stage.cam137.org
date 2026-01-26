@@ -1353,6 +1353,156 @@
   margin: 2px 0;
 }
 
+/* ============================================================================
+   INSEE Search Panel
+   ============================================================================ */
+
+.admin-insee-panel {
+  padding: 20px;
+}
+
+.admin-insee-header {
+  margin-bottom: 24px;
+}
+
+.admin-insee-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px 0;
+  color: var(--text-primary);
+  font-size: 18px;
+}
+
+.admin-insee-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.admin-insee-form {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.admin-insee-results {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.admin-insee-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.admin-insee-results-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-insee-results-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.admin-insee-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.15s ease;
+}
+
+.admin-insee-result-item:last-child {
+  border-bottom: none;
+}
+
+.admin-insee-result-item:hover {
+  background: #f9fafb;
+}
+
+.admin-insee-result-item.added {
+  background: #d1fae5;
+}
+
+.admin-insee-result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-insee-result-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.admin-insee-result-address {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.admin-insee-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.admin-insee-result-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #6b7280;
+}
+
+.admin-insee-result-meta span i {
+  font-size: 11px;
+}
+
+.admin-insee-result-type {
+  color: var(--color-primary) !important;
+}
+
+.admin-insee-result-geo {
+  color: #10b981 !important;
+}
+
+.admin-insee-loading,
+.admin-insee-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.admin-insee-loading i,
+.admin-insee-empty i {
+  font-size: 32px;
+  color: #9ca3af;
+}
+
+.admin-btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
 .admin-form-actions {
   display: flex;
   justify-content: flex-end;

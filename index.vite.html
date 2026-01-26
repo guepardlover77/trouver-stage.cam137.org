@@ -35,56 +35,6 @@
         <div class="loading-subtext">Préparation des lieux de stage</div>
     </div>
 
-    <!-- Modal API INSEE -->
-    <div class="modal-overlay" id="inseeModal">
-        <div class="modal">
-            <h2><i class="fas fa-building"></i> Recherche INSEE</h2>
-            <p>Recherchez automatiquement des entreprises de restauration via la base de données officielle de l'INSEE.</p>
-
-            <div class="modal-input">
-                <label for="inseeDepartement"><i class="fas fa-map"></i> Département</label>
-                <select id="inseeDepartement">
-                    <option value="79">79 - Deux-Sèvres</option>
-                    <option value="86">86 - Vienne</option>
-                    <option value="17">17 - Charente-Maritime</option>
-                    <option value="16">16 - Charente</option>
-                    <option value="85">85 - Vendée</option>
-                </select>
-            </div>
-
-            <div class="modal-input">
-                <label for="inseeActivite"><i class="fas fa-utensils"></i> Type d'activité</label>
-                <select id="inseeActivite">
-                    <option value="56.10A">Restauration traditionnelle</option>
-                    <option value="56.10B">Cafétérias et libres-services</option>
-                    <option value="56.10C">Restauration rapide</option>
-                    <option value="56.21Z">Traiteurs</option>
-                    <option value="56.29A">Restauration collective</option>
-                    <option value="55.10Z">Hôtels et hébergement</option>
-                </select>
-            </div>
-
-            <div class="modal-input">
-                <label for="inseeVille"><i class="fas fa-city"></i> Ville (optionnel)</label>
-                <input type="text" id="inseeVille" placeholder="Ex: Parthenay">
-            </div>
-
-            <div class="insee-results" id="inseeResults" style="display: none;">
-                <h3><i class="fas fa-list"></i> Résultats</h3>
-                <div id="inseeResultsList"></div>
-            </div>
-
-            <div class="modal-buttons">
-                <button class="modal-btn modal-btn-secondary" id="closeInseeModal">
-                    <i class="fas fa-times"></i> Fermer
-                </button>
-                <button class="modal-btn modal-btn-primary" id="searchInseeBtn">
-                    <i class="fas fa-search"></i> Rechercher
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- En-tête -->
     <header>
         <div class="header-left">
@@ -94,9 +44,6 @@
         <div class="header-right">
             <button class="header-btn" id="geolocateBtn" title="Re-géolocaliser les adresses sans coordonnées">
                 <i class="fas fa-crosshairs"></i> Géolocaliser
-            </button>
-            <button class="header-btn" id="openInseeBtn">
-                <i class="fas fa-plus"></i> Ajouter via INSEE
             </button>
             <button class="header-btn header-btn-admin" id="adminBtn" title="Administration des lieux de stage">
                 <i class="fas fa-cog"></i> Admin
@@ -177,9 +124,6 @@
 
     <!-- Leaflet Heat -->
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-
-    <!-- Données embarquées (fallback pour file://) -->
-    <script src="js/stageData.js"></script>
 
     <!-- Point d'entrée TypeScript (Vite) -->
     <script type="module" src="/src/main.ts"></script>
