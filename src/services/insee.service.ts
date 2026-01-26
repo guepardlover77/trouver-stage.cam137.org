@@ -83,9 +83,8 @@ export function nafToType(nafCode: string): string {
 }
 
 /**
- * Recherche dans l'API SIRENE
- * Note: Cette API nécessite normalement une clé API
- * Pour une utilisation gratuite, on utilise l'API publique avec limitations
+ * Recherche dans l'API Recherche Entreprises (gouvernement français)
+ * Cette API est gratuite, fiable et filtre correctement par département
  */
 export async function searchSirene(params: {
   departement?: string;
@@ -94,39 +93,35 @@ export async function searchSirene(params: {
   raisonSociale?: string;
   limit?: number;
 }): Promise<INSEEResult[]> {
-  const { departement, commune, codeNaf, raisonSociale, limit = 20 } = params;
+  const { departement, commune, codeNaf, raisonSociale, limit = 25 } = params;
 
-  // Construction de la requête
-  // Note: L'API SIRENE complète nécessite une inscription sur api.insee.fr
-  // Cette implémentation utilise une approche simplifiée
-
-  const baseUrl = 'https://entreprise.data.gouv.fr/api/sirene/v3/etablissements';
-  const queryParts: string[] = [];
-
-  if (departement) {
-    queryParts.push(`codePostalEtablissement:${departement}*`);
-  }
-
-  if (commune) {
-    queryParts.push(`libelleCommuneEtablissement:${commune}`);
-  }
-
-  if (codeNaf && codeNaf.length > 0) {
-    const nafQuery = codeNaf.map(c => `activitePrincipaleEtablissement:${c.replace('.', '')}`).join(' OR ');
-    queryParts.push(`(${nafQuery})`);
-  }
-
-  if (raisonSociale) {
-    queryParts.push(`denominationUniteLegale:*${raisonSociale}*`);
-  }
-
-  // Filtrer uniquement les établissements actifs
-  queryParts.push('etatAdministratifEtablissement:A');
+  // API Recherche Entreprises - filtrage fiable par département
+  const baseUrl = 'https://recherche-entreprises.api.gouv.fr/search';
 
   try {
     const url = new URL(baseUrl);
-    url.searchParams.set('q', queryParts.join(' AND '));
+
+    // Paramètre de recherche textuelle (ville ou raison sociale)
+    if (raisonSociale) {
+      url.searchParams.set('q', raisonSociale);
+    } else if (commune) {
+      url.searchParams.set('q', commune);
+    }
+
+    // Filtre par département - paramètre explicite et fiable
+    if (departement) {
+      url.searchParams.set('departement', departement);
+    }
+
+    // Filtre par activité NAF
+    if (codeNaf && codeNaf.length > 0) {
+      // L'API accepte plusieurs codes NAF séparés par des virgules
+      url.searchParams.set('activite_principale', codeNaf.join(','));
+    }
+
+    // Pagination
     url.searchParams.set('per_page', String(limit));
+    url.searchParams.set('page', '1');
 
     const response = await fetch(url.toString());
 
@@ -139,30 +134,65 @@ export async function searchSirene(params: {
 
     const data = await response.json();
 
-    if (!data.etablissements || data.etablissements.length === 0) {
+    if (!data.results || data.results.length === 0) {
       return [];
     }
 
     // Transformer les résultats
-    const results: INSEEResult[] = data.etablissements.map((etab: any) => {
-      const adresseParts = [
-        etab.numeroVoieEtablissement,
-        etab.typeVoieEtablissement,
-        etab.libelleVoieEtablissement
-      ].filter(Boolean);
+    // L'API retourne les entreprises avec leurs établissements correspondant au filtre
+    // On utilise matching_etablissements pour avoir les établissements dans le bon département
+    const results: INSEEResult[] = [];
 
-      return {
-        siret: etab.siret,
-        nom: etab.uniteLegale?.denominationUniteLegale ||
-          etab.uniteLegale?.nomUniteLegale ||
-          'Sans nom',
-        adresse: adresseParts.join(' '),
-        codePostal: etab.codePostalEtablissement || '',
-        ville: etab.libelleCommuneEtablissement || '',
-        activitePrincipale: etab.activitePrincipaleEtablissement || '',
-        type: nafToType(etab.activitePrincipaleEtablissement?.replace(/(\d{2})(\d{2})([A-Z])/, '$1.$2$3') || '')
-      };
-    });
+    for (const entreprise of data.results) {
+      // Utiliser matching_etablissements si disponible (établissements dans le département recherché)
+      // Sinon utiliser le siège (cas d'une recherche sans filtre département)
+      const etablissements = entreprise.matching_etablissements?.length > 0
+        ? entreprise.matching_etablissements
+        : [entreprise.siege];
+
+      for (const etab of etablissements) {
+        if (!etab) continue;
+
+        // Vérifier que l'établissement est bien dans le département demandé
+        if (departement && etab.code_postal && !etab.code_postal.startsWith(departement)) {
+          continue;
+        }
+
+        // Récupérer le nom (enseigne de l'établissement, nom commercial, ou nom de l'entreprise)
+        const enseignes = etab.liste_enseignes || [];
+        const nom = enseignes[0] || etab.nom_commercial || entreprise.nom_complet || 'Sans nom';
+
+        // Code NAF formaté (ex: "56.10A")
+        const activiteCode = etab.activite_principale || '';
+        const activiteFormatee = activiteCode.replace(/(\d{2})(\d{2})([A-Z])/, '$1.$2$3');
+
+        // Extraire l'adresse depuis le champ adresse ou construire depuis les composants
+        let adresse = '';
+        if (etab.adresse) {
+          // L'adresse complète inclut souvent le code postal et la ville, on les retire
+          const adresseParts = etab.adresse.split(' ');
+          const codePostalIndex = adresseParts.findIndex((p: string) => /^\d{5}$/.test(p));
+          if (codePostalIndex > 0) {
+            adresse = adresseParts.slice(0, codePostalIndex).join(' ');
+          } else {
+            adresse = etab.adresse;
+          }
+        }
+
+        results.push({
+          siret: etab.siret || entreprise.siren,
+          nom: nom,
+          adresse: adresse,
+          codePostal: etab.code_postal || '',
+          ville: etab.libelle_commune || '',
+          activitePrincipale: activiteCode,
+          type: nafToType(activiteFormatee),
+          // Coordonnées GPS incluses dans la réponse
+          lat: etab.latitude ? parseFloat(etab.latitude) : undefined,
+          lon: etab.longitude ? parseFloat(etab.longitude) : undefined
+        });
+      }
+    }
 
     return results;
   } catch (error) {
@@ -173,6 +203,8 @@ export async function searchSirene(params: {
 
 /**
  * Recherche et géocode un établissement
+ * Note: La nouvelle API retourne déjà les coordonnées GPS pour la plupart des résultats
+ * Le géocodage n'est effectué que pour les résultats sans coordonnées
  */
 export async function searchAndGeocode(params: {
   departement?: string;
@@ -182,9 +214,15 @@ export async function searchAndGeocode(params: {
 }): Promise<INSEEResult[]> {
   const results = await searchSirene(params);
 
-  // Géocoder chaque résultat
+  // Géocoder uniquement les résultats sans coordonnées
   const geocodedResults = await Promise.all(
     results.map(async (result) => {
+      // Si les coordonnées sont déjà présentes, on les garde
+      if (result.lat && result.lon) {
+        return result;
+      }
+
+      // Sinon, on géocode l'adresse
       if (result.adresse && result.codePostal && result.ville) {
         const coords = await geocodeAddress(result.adresse, result.codePostal, result.ville);
         if (coords) {
