@@ -3,9 +3,16 @@
 // ============================================================================
 
 import type { Location } from '../../types';
-import { geocodeAddress } from '../../services/geocoding.service';
+import { geocodeAddress, autocompleteAddress } from '../../services/geocoding.service';
 import { findSimilarLocations, getAllLocations } from '../../services/data.service';
 import { store } from '../../store';
+
+interface AddressSuggestion {
+  label: string;
+  lat: number;
+  lon: number;
+  type: string;
+}
 
 export interface LocationFormOptions {
   location?: Location;
@@ -70,11 +77,19 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
       <div class="admin-form-section">
         <h4><i class="fas fa-map-marker-alt"></i> Adresse</h4>
 
-        <div class="admin-form-group">
+        <div class="admin-form-group admin-address-autocomplete">
           <label for="adresse">Adresse *</label>
-          <input type="text" id="adresse" name="adresse" class="admin-input" required
-                 value="${escapeHtml(location?.adresse || '')}"
-                 placeholder="Ex: 12 rue de la Gare">
+          <div class="admin-autocomplete-wrapper">
+            <input type="text" id="adresse" name="adresse" class="admin-input" required
+                   value="${escapeHtml(location?.adresse || '')}"
+                   placeholder="Commencez à taper une adresse..."
+                   autocomplete="off">
+            <div class="admin-autocomplete-spinner" id="autocompleteSpinner" style="display: none;">
+              <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <ul class="admin-autocomplete-list" id="autocompleteList"></ul>
+          </div>
+          <small class="admin-form-hint">L'adresse sera auto-complétée et les coordonnées GPS seront récupérées automatiquement</small>
         </div>
 
         <div class="admin-form-row">
@@ -94,17 +109,17 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
           </div>
         </div>
 
-        <div class="admin-form-row admin-form-coords">
+        <div class="admin-form-row admin-form-coords" id="coordsSection">
           <div class="admin-form-group">
             <label for="lat">Latitude</label>
-            <input type="number" id="lat" name="lat" class="admin-input"
+            <input type="number" id="lat" name="lat" class="admin-input admin-coord-input"
                    value="${location?.lat ?? ''}"
                    step="0.000001" min="-90" max="90"
                    placeholder="46.6453">
           </div>
           <div class="admin-form-group">
             <label for="lon">Longitude</label>
-            <input type="number" id="lon" name="lon" class="admin-input"
+            <input type="number" id="lon" name="lon" class="admin-input admin-coord-input"
                    value="${location?.lon ?? ''}"
                    step="0.000001" min="-180" max="180"
                    placeholder="-0.2489">
@@ -184,6 +199,18 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
   const duplicatesList = form.querySelector('#duplicatesList') as HTMLUListElement;
   const cancelBtn = form.querySelector('#cancelBtn') as HTMLButtonElement;
 
+  // Autocomplete elements
+  const adresseInput = form.querySelector('#adresse') as HTMLInputElement;
+  const autocompleteList = form.querySelector('#autocompleteList') as HTMLUListElement;
+  const autocompleteSpinner = form.querySelector('#autocompleteSpinner') as HTMLElement;
+  const coordsSection = form.querySelector('#coordsSection') as HTMLElement;
+  const latInput = form.querySelector('#lat') as HTMLInputElement;
+  const lonInput = form.querySelector('#lon') as HTMLInputElement;
+  const codePostalInput = form.querySelector('#codePostal') as HTMLInputElement;
+
+  let currentSuggestions: AddressSuggestion[] = [];
+  let selectedIndex = -1;
+
   // Type "Autre" handling
   typeSelect.addEventListener('change', () => {
     if (typeSelect.value === '__autre__') {
@@ -197,11 +224,187 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
     }
   });
 
-  // Geocoding
+  // ============================================================================
+  // Address Autocomplete
+  // ============================================================================
+
+  const showAutocompleteList = () => {
+    autocompleteList.classList.add('visible');
+  };
+
+  const hideAutocompleteList = () => {
+    autocompleteList.classList.remove('visible');
+    selectedIndex = -1;
+  };
+
+  const updateAutocompleteList = (suggestions: AddressSuggestion[]) => {
+    currentSuggestions = suggestions;
+    selectedIndex = -1;
+
+    if (suggestions.length === 0) {
+      hideAutocompleteList();
+      return;
+    }
+
+    autocompleteList.innerHTML = suggestions.map((s, i) => `
+      <li class="admin-autocomplete-item" data-index="${i}">
+        <i class="fas fa-map-marker-alt"></i>
+        <span>${escapeHtml(s.label)}</span>
+      </li>
+    `).join('');
+
+    showAutocompleteList();
+  };
+
+  const selectSuggestion = (suggestion: AddressSuggestion) => {
+    // Parse the label to extract address components
+    // Format: "numero rue, code_postal ville" or "lieu-dit, code_postal ville"
+    const parts = suggestion.label.split(',');
+    let adresse = '';
+    let codePostal = '';
+    let ville = '';
+
+    if (parts.length >= 2) {
+      adresse = parts[0].trim();
+      // The last part usually contains "code_postal ville"
+      const lastPart = parts[parts.length - 1].trim();
+      const cpMatch = lastPart.match(/^(\d{5})\s+(.+)$/);
+      if (cpMatch) {
+        codePostal = cpMatch[1];
+        ville = cpMatch[2];
+      } else {
+        ville = lastPart;
+      }
+    } else {
+      adresse = suggestion.label;
+    }
+
+    // Update form fields
+    adresseInput.value = adresse;
+    if (codePostal) codePostalInput.value = codePostal;
+    if (ville) villeInput.value = ville;
+
+    // Update coordinates with animation
+    updateCoordsWithAnimation(suggestion.lat, suggestion.lon);
+
+    hideAutocompleteList();
+  };
+
+  const updateCoordsWithAnimation = (lat: number, lon: number) => {
+    // Add animation class
+    coordsSection.classList.add('coords-updating');
+    latInput.classList.add('coord-flash');
+    lonInput.classList.add('coord-flash');
+
+    // Update values
+    latInput.value = lat.toFixed(6);
+    lonInput.value = lon.toFixed(6);
+
+    // Show success message
+    geocodeResult.innerHTML = `<i class="fas fa-check-circle"></i> Coordonnées GPS récupérées automatiquement`;
+    geocodeResult.className = 'admin-geocode-result success';
+    geocodeResult.style.display = 'flex';
+
+    // Remove animation class after animation completes
+    setTimeout(() => {
+      coordsSection.classList.remove('coords-updating');
+      latInput.classList.remove('coord-flash');
+      lonInput.classList.remove('coord-flash');
+    }, 600);
+  };
+
+  // Debounced autocomplete search
+  const searchAutocomplete = debounce(async (query: string) => {
+    if (query.length < 3) {
+      hideAutocompleteList();
+      autocompleteSpinner.style.display = 'none';
+      return;
+    }
+
+    autocompleteSpinner.style.display = 'flex';
+
+    try {
+      const suggestions = await autocompleteAddress(query);
+      updateAutocompleteList(suggestions);
+    } catch (error) {
+      console.error('Autocomplete error:', error);
+      hideAutocompleteList();
+    }
+
+    autocompleteSpinner.style.display = 'none';
+  }, 300);
+
+  // Input event for autocomplete
+  adresseInput.addEventListener('input', (e) => {
+    const query = (e.target as HTMLInputElement).value;
+    searchAutocomplete(query);
+  });
+
+  // Keyboard navigation
+  adresseInput.addEventListener('keydown', (e) => {
+    if (!autocompleteList.classList.contains('visible')) return;
+
+    const items = autocompleteList.querySelectorAll('.admin-autocomplete-item');
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && currentSuggestions[selectedIndex]) {
+          selectSuggestion(currentSuggestions[selectedIndex]);
+        }
+        return;
+      case 'Escape':
+        hideAutocompleteList();
+        return;
+      default:
+        return;
+    }
+
+    // Update visual selection
+    items.forEach((item, i) => {
+      item.classList.toggle('selected', i === selectedIndex);
+    });
+  });
+
+  // Click on suggestion
+  autocompleteList.addEventListener('click', (e) => {
+    const item = (e.target as HTMLElement).closest('.admin-autocomplete-item');
+    if (item) {
+      const index = parseInt(item.getAttribute('data-index') || '0', 10);
+      if (currentSuggestions[index]) {
+        selectSuggestion(currentSuggestions[index]);
+      }
+    }
+  });
+
+  // Hide autocomplete on blur (with delay to allow click)
+  adresseInput.addEventListener('blur', () => {
+    setTimeout(hideAutocompleteList, 200);
+  });
+
+  // Show autocomplete on focus if there's content
+  adresseInput.addEventListener('focus', () => {
+    if (adresseInput.value.length >= 3 && currentSuggestions.length > 0) {
+      showAutocompleteList();
+    }
+  });
+
+  // ============================================================================
+  // Manual Geocoding Button
+  // ============================================================================
+
   geocodeBtn.addEventListener('click', async () => {
-    const adresse = (form.querySelector('#adresse') as HTMLInputElement).value.trim();
-    const codePostal = (form.querySelector('#codePostal') as HTMLInputElement).value.trim();
-    const ville = (form.querySelector('#ville') as HTMLInputElement).value.trim();
+    const adresse = adresseInput.value.trim();
+    const codePostal = codePostalInput.value.trim();
+    const ville = villeInput.value.trim();
 
     if (!adresse || !codePostal || !ville) {
       geocodeResult.innerHTML = '<i class="fas fa-exclamation-circle"></i> Remplissez l\'adresse, le code postal et la ville';
@@ -217,8 +420,7 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
     try {
       const result = await geocodeAddress(adresse, codePostal, ville);
       if (result) {
-        (form.querySelector('#lat') as HTMLInputElement).value = result.lat.toFixed(6);
-        (form.querySelector('#lon') as HTMLInputElement).value = result.lon.toFixed(6);
+        updateCoordsWithAnimation(result.lat, result.lon);
         geocodeResult.innerHTML = `<i class="fas fa-check-circle"></i> Coordonnées trouvées (confiance: ${Math.round(result.confidence * 100)}%)`;
         geocodeResult.className = 'admin-geocode-result success';
       } else {
@@ -281,7 +483,6 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
   };
 
   // Real-time validation
-  const codePostalInput = form.querySelector('#codePostal') as HTMLInputElement;
   codePostalInput.addEventListener('blur', () => {
     validateField(codePostalInput, 'codePostalError', (value) => {
       if (!/^\d{5}$/.test(value)) return 'Le code postal doit contenir 5 chiffres';
@@ -342,12 +543,9 @@ export function createLocationForm(container: HTMLElement, options: LocationForm
       return;
     }
 
-    const latInput = form.querySelector('#lat') as HTMLInputElement;
-    const lonInput = form.querySelector('#lon') as HTMLInputElement;
-
     const newLocation: Location = {
       nom: nomInput.value.trim(),
-      adresse: (form.querySelector('#adresse') as HTMLInputElement).value.trim(),
+      adresse: adresseInput.value.trim(),
       codePostal: codePostalInput.value.trim(),
       ville: villeInput.value.trim(),
       type: typeValue,
