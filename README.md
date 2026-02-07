@@ -39,7 +39,8 @@ Application web interactive pour visualiser et gérer les lieux de stage en Hôt
 
 ### Prérequis
 - Docker et Docker Compose
-- Node.js 20+ (pour le développement)
+- Node.js 20+ (pour le développement frontend)
+- PHP 8.3+ et Composer (pour le développement backend, optionnel avec Docker)
 
 ### Déploiement avec Docker (Recommandé)
 
@@ -81,13 +82,17 @@ Les fichiers sont générés dans `dist/`.
 ## Structure du Projet
 
 ```
-├── backend/                # API Node.js (Express + PostgreSQL)
-│   ├── src/
-│   │   ├── index.ts       # Point d'entrée de l'API
-│   │   ├── routes/        # Routes API REST
-│   │   └── services/      # Services métier
-│   ├── Dockerfile
-│   └── package.json
+├── backend-laravel/        # API Laravel 11 (PHP 8.3 + PostgreSQL)
+│   ├── app/
+│   │   ├── Http/Controllers/Api/V1/  # Contrôleurs API REST
+│   │   ├── Http/Middleware/           # Authentification admin
+│   │   ├── Http/Requests/            # Validation des requêtes
+│   │   ├── Http/Resources/           # Transformation des réponses
+│   │   └── Models/                   # Modèles Eloquent
+│   ├── database/migrations/          # Schéma de base de données
+│   ├── routes/api.php                # Définition des routes API
+│   ├── docker/                       # Config Docker (PHP-FPM, Nginx)
+│   └── composer.json
 │
 ├── src/                    # Frontend TypeScript
 │   ├── main.ts            # Point d'entrée
@@ -118,16 +123,18 @@ Les fichiers sont générés dans `dist/`.
 | Composant | Description |
 |-----------|-------------|
 | **Frontend** | TypeScript + Vite, servi par Nginx |
-| **API** | Node.js + Express + TypeScript |
+| **API** | Laravel 11 (PHP 8.3) |
 | **Base de données** | PostgreSQL 16 |
 | **Reverse Proxy** | Nginx |
+| **PHP Runtime** | PHP-FPM (FastCGI) |
 
 ### Services Docker
 
 | Service | Port | Description |
 |---------|------|-------------|
 | `nginx` | 8080 | Frontend + reverse proxy |
-| `api` | 3004 | API REST |
+| `api` | 3004 | Nginx pour l'API Laravel |
+| `php` | - | PHP-FPM (Laravel, interne) |
 | `postgres` | - | Base de données (interne) |
 
 ## Configuration
@@ -198,6 +205,15 @@ docker compose logs -f
 
 # Arrêter les conteneurs
 docker compose down
+
+# Générer la clé Laravel (après premier lancement)
+docker compose exec php php artisan key:generate
+
+# Exécuter les migrations de base de données
+docker compose exec php php artisan migrate
+
+# Importer les données depuis data.json
+docker compose exec php php artisan app:migrate-data-json
 ```
 
 ### Structure du code TypeScript
@@ -216,8 +232,8 @@ Utilisation libre pour l'établissement et ses partenaires.
 ## Technologies
 
 - **Frontend** : TypeScript, Vite, Leaflet.js
-- **Backend** : Node.js, Express, PostgreSQL
-- **Infrastructure** : Docker, Nginx
+- **Backend** : Laravel 11, PHP 8.3, PostgreSQL 16
+- **Infrastructure** : Docker, Nginx, PHP-FPM
 - **Cartes** : OpenStreetMap, Leaflet.markercluster, Leaflet.heat
 - **Export** : jsPDF, xlsx
 - **PWA** : Workbox, vite-plugin-pwa
