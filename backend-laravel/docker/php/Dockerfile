@@ -38,16 +38,18 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 # Copy application code
 COPY . .
 
-# Generate optimized autoload
-RUN composer dump-autoload --optimize --no-dev
-
-# Create storage directories and set permissions
+# Create storage directories and bootstrap/cache BEFORE autoload dump
 RUN mkdir -p storage/framework/cache/data \
     && mkdir -p storage/framework/sessions \
     && mkdir -p storage/framework/views \
     && mkdir -p storage/logs \
-    && mkdir -p bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html \
+    && mkdir -p bootstrap/cache
+
+# Generate optimized autoload
+RUN composer dump-autoload --optimize --no-dev
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
 # Copy entrypoint script
