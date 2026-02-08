@@ -23,14 +23,16 @@ echo "PostgreSQL prêt."
 
 # Générer APP_KEY si absent
 if [ -z "$APP_KEY" ]; then
-    echo "Génération de APP_KEY..."
-    # Créer .env si absent (nécessaire pour key:generate)
-    if [ ! -f .env ]; then
+    # Vérifier si une clé existe déjà dans .env
+    if [ -f .env ] && grep -q '^APP_KEY=base64:' .env; then
+        echo "APP_KEY trouvée dans .env"
+        export APP_KEY=$(grep '^APP_KEY=' .env | cut -d'=' -f2-)
+    else
+        echo "Génération de APP_KEY..."
         echo "APP_KEY=" > .env
+        php artisan key:generate --force
+        export APP_KEY=$(grep '^APP_KEY=' .env | cut -d'=' -f2-)
     fi
-    php artisan key:generate --force
-    # Exporter la clé générée pour le processus en cours
-    export APP_KEY=$(grep '^APP_KEY=' .env | cut -d'=' -f2-)
 fi
 
 # Exécuter les migrations
