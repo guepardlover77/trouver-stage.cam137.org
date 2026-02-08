@@ -9,8 +9,9 @@ if [ ! -f vendor/autoload.php ]; then
     composer install --no-dev --optimize-autoloader --no-interaction
 fi
 
-# Créer les répertoires nécessaires
+# Créer les répertoires nécessaires et fixer les permissions pour www-data
 mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+chown -R www-data:www-data storage/framework storage/logs bootstrap/cache 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
 # Attendre que PostgreSQL soit prêt
