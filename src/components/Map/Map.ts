@@ -43,15 +43,17 @@ function createMarkerIcon(options: MarkerOptions): any {
     className: 'custom-marker',
     html: `
       <div class="marker-pin" style="--marker-color: ${iconColor}">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        <svg viewBox="0 0 36 50" width="36" height="50" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 0C8.06 0 0 8.06 0 18c0 13.5 18 32 18 32s18-18.5 18-32C36 8.06 27.94 0 18 0z" fill="${iconColor}"/>
+          <circle cx="18" cy="18" r="9" fill="white"/>
+          <circle cx="18" cy="18" r="4.5" fill="${iconColor}"/>
         </svg>
         ${isFavorite ? '<span class="marker-star">★</span>' : ''}
       </div>
     `,
-    iconSize: [32, 42],
-    iconAnchor: [16, 42],
-    popupAnchor: [0, -42]
+    iconSize: [36, 50],
+    iconAnchor: [18, 50],
+    popupAnchor: [0, -50]
   });
 }
 
@@ -121,7 +123,10 @@ function createPopupContent(location: Location, index: number): string {
                 data-lat="${location.lat}"
                 data-lon="${location.lon}"
                 data-name="${encodeURIComponent(location.nom)}">
-          🧭 Itinéraire
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+          </svg>
+          Itinéraire
         </button>
       </div>
     </div>
@@ -140,10 +145,11 @@ export function initMap(container: HTMLElement): any {
     attributionControl: true
   });
 
-  // Ajouter le tile layer
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
+  // Ajouter le tile layer (CartoDB Voyager - plus épuré)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
   }).addTo(map);
 
   // Créer le groupe de clusters avec configuration optimisée
@@ -188,18 +194,22 @@ export function initMap(container: HTMLElement): any {
         }
       });
 
-      // Déterminer la taille et couleur
+      // Déterminer la taille
       let sizeClass = 'small';
-      let size = 40;
-      if (count > 100) { sizeClass = 'xlarge'; size = 60; }
-      else if (count > 50) { sizeClass = 'large'; size = 50; }
-      else if (count > 20) { sizeClass = 'medium'; size = 45; }
+      let size = 44;
+      if (count > 100) { sizeClass = 'xlarge'; size = 64; }
+      else if (count > 50) { sizeClass = 'large'; size = 54; }
+      else if (count > 20) { sizeClass = 'medium'; size = 48; }
 
-      // Couleur basée sur le ratio de correspondance
+      // Ratio de correspondance pour l'anneau conic-gradient
       const matchRatio = count > 0 ? matchingCount / count : 0;
+      const matchPercent = Math.round(matchRatio * 100);
       let colorClass = 'default';
       if (matchRatio > 0.7) colorClass = 'hot';
       else if (matchRatio > 0.3) colorClass = 'warm';
+
+      // Couleur de l'anneau selon le ratio
+      const ringColor = colorClass === 'hot' ? '#ef4444' : colorClass === 'warm' ? '#f59e0b' : '#3b82f6';
 
       // Indicateur de favoris
       const favIndicator = favoriteCount > 0
@@ -208,7 +218,8 @@ export function initMap(container: HTMLElement): any {
 
       return L.divIcon({
         html: `
-          <div class="cluster-marker cluster-${sizeClass} cluster-${colorClass}">
+          <div class="cluster-marker cluster-${sizeClass} cluster-${colorClass}"
+               style="--match-percent: ${matchPercent}; --ring-color: ${ringColor}">
             <span class="cluster-count">${count}</span>
             ${favIndicator}
           </div>

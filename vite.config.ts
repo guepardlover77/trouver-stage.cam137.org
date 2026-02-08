@@ -70,7 +70,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*tile\.openstreetmap\.org\/.*/i,
+            urlPattern: /^https:\/\/(.*tile\.openstreetmap\.org|.*basemaps\.cartocdn\.com)\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'map-tiles',
